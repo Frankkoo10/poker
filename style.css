@@ -150,6 +150,27 @@ h3 { margin-bottom: 5px; }
 .modal-content p, .modal-content ul { font-size: 0.95rem; line-height: 1.5; color: #fff; margin-bottom: 8px; }
 .close-modal { position: absolute; top: 15px; right: 15px; cursor: pointer; display: flex; align-items: center; }
 
+/* ============ RANKING DE MANOS ============ */
+.rank-link-btn { display: block; width: 100%; margin-top: 12px; background: rgba(255,209,80,0.12); color: var(--accent); border: 1px solid var(--accent); padding: 10px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.5px; }
+.rank-link-btn:hover { background: var(--outline); color: #140612; }
+.ranking-btn { right: 60px; font-size: 1rem; background: var(--outline); }
+.rank-modal-content { max-width: 400px; max-height: 80vh; overflow-y: auto; }
+.rank-subtitle { color: var(--muted); font-size: 0.85rem; }
+.rank-list { padding-left: 22px; margin: 0 0 12px; }
+.rank-list li { font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px; color: #fff; }
+.rank-ex { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 400; margin-top: 2px; }
+.rank-footnote { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+/* ============ TIMER DE TURNO Y DESCONEXIÓN ============ */
+.seat-timer-ring { position: relative; width: 34px; height: 34px; margin: 2px auto -2px; }
+.seat-timer-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.seat-timer-ring circle { fill: none; stroke-width: 3; }
+.seat-timer-ring .ring-bg { stroke: rgba(255,255,255,0.15); }
+.seat-timer-ring .ring-fg { stroke: var(--success); stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.3s ease; }
+.seat-timer-ring.urgent .ring-fg { stroke: var(--danger); }
+.seat-timer-ring .ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 900; color: #fff; }
+.seat-tag.disconnected { color: #ffb84d; }
+
 @media (max-width: 768px) {
     body { padding: 5px; }
     .top-logo { width: 45px; height: 45px; top: 10px; left: 10px; }

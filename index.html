@@ -27,10 +27,16 @@
             <p>Gana la mejor mano de 5 cartas combinando las tuyas con las de la mesa.</p>
             <p><strong>Ciegas:</strong> SB $<span id="rules-sb">10</span> / BB $<span id="rules-bb">20</span>, rotan cada mano.</p>
             <p>Podés Pasar, Igualar, Subir, Ir All-In o Retirarte en tu turno.</p>
+            <p><strong>Tiempo de turno:</strong> tenés <span id="rules-time">20</span>s para actuar. Un anillo alrededor del jugador activo muestra la cuenta regresiva; si se agota, el sistema Pasa (si es gratis) o te Retira automáticamente.</p>
+            <p><strong>Desconexiones:</strong> si te vas de la app a mitad de mano, tu asiento queda marcado "Desconectado" y tus turnos se resuelven solos con un tiempo reducido, para no trabar la mesa. Tus fichas quedan a salvo hasta que vuelvas o te levantes.</p>
+            <button class="rank-link-btn" onclick="toggleHandRankingsModal(true)">VER RANKING DE MANOS</button>
         </aside>
 
         <button id="info-btn-mobile" class="info-btn" onclick="toggleModal(true)">
             <img src="info.png" alt="Info" class="btn-icon">
+        </button>
+        <button id="ranking-btn-mobile" class="info-btn ranking-btn" onclick="toggleHandRankingsModal(true)">
+            🏆
         </button>
 
         <main class="game-container">
@@ -112,6 +118,32 @@
             <p>Cada jugador recibe 2 cartas privadas. Se reparten 5 cartas comunitarias en 3 rondas (Flop 3, Turn 1, River 1).</p>
             <p>Gana quien arme la mejor combinación de 5 cartas entre sus 2 privadas y las 5 de la mesa.</p>
             <p>Ciegas rotativas, apuesta libre (sin límite), all-in y botes divididos (side pots) soportados.</p>
+            <p><strong>Tiempo de turno:</strong> 20 segundos por jugada, marcados con un anillo de cuenta regresiva alrededor del asiento activo. Si el tiempo se acaba, el sistema actúa por vos: Pasa si no hay apuesta que igualar, o te Retira si la hay.</p>
+            <p><strong>Si te desconectás</strong> a mitad de mano, tu asiento queda en la mesa con tus fichas intactas y se marca "🔌 Desconectado". Mientras estés así, tus turnos se resuelven automáticamente con un tiempo reducido (5s) para que la partida siga fluyendo. Al volver a conectarte, la etiqueta desaparece y jugás con normalidad.</p>
+            <button class="rank-link-btn" onclick="toggleModal(false); toggleHandRankingsModal(true)">VER RANKING DE MANOS</button>
+        </div>
+    </div>
+
+    <div id="hand-rankings-modal" class="modal-overlay" onclick="toggleHandRankingsModal(false)">
+        <div class="modal-content rank-modal-content" onclick="event.stopPropagation()">
+            <span class="close-modal" onclick="toggleHandRankingsModal(false)">
+                <img src="close.png" alt="Cerrar" class="btn-icon">
+            </span>
+            <h2>RANKING DE MANOS</h2>
+            <hr>
+            <p class="rank-subtitle">De la mejor a la peor combinación posible:</p>
+            <ol class="rank-list">
+                <li><strong>Escalera de color</strong> — 5 cartas consecutivas del mismo palo. <span class="rank-ex">Ej: 8♥ 9♥ 10♥ J♥ Q♥</span></li>
+                <li><strong>Póker</strong> — 4 cartas del mismo valor. <span class="rank-ex">Ej: 9♠ 9♥ 9♦ 9♣</span></li>
+                <li><strong>Full house</strong> — Un trío más un par. <span class="rank-ex">Ej: K K K + 4 4</span></li>
+                <li><strong>Color</strong> — 5 cartas del mismo palo, sin ser consecutivas. <span class="rank-ex">Ej: 2♣ 6♣ 9♣ J♣ K♣</span></li>
+                <li><strong>Escalera</strong> — 5 cartas consecutivas de palos distintos. <span class="rank-ex">Ej: 5♦ 6♠ 7♥ 8♣ 9♦</span></li>
+                <li><strong>Trío</strong> — 3 cartas del mismo valor. <span class="rank-ex">Ej: 7♠ 7♥ 7♦</span></li>
+                <li><strong>Doble par</strong> — Dos pares distintos. <span class="rank-ex">Ej: J J + 4 4</span></li>
+                <li><strong>Par</strong> — 2 cartas del mismo valor. <span class="rank-ex">Ej: A♠ A♥</span></li>
+                <li><strong>Carta alta</strong> — Ninguna combinación; gana la carta más alta. <span class="rank-ex">Ej: A K Q 9 4 sin combinar</span></li>
+            </ol>
+            <p class="rank-footnote">En caso de empate en el tipo de mano, gana quien tenga las cartas de mayor valor (o se divide el pozo si es exactamente igual).</p>
         </div>
     </div>
 

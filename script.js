@@ -29,6 +29,7 @@ const SMALL_BLIND = 10;
 const BIG_BLIND = 20;
 let bigBlindGlobal = BIG_BLIND; // usado desde el HTML (botones +/- de subida)
 const ACTION_TIME = 20000;      // ms para actuar en el turno
+const DISCONNECT_ACTION_TIME = 5000; // ms para actuar si el jugador en turno está desconectado
 const HAND_OVER_PAUSE = 12000;  // pausa mostrando resultados (da tiempo a levantarse antes de la próxima mano)
 const WAITING_COUNTDOWN = 8000; // cuenta regresiva antes de arrancar mano
 
@@ -92,6 +93,7 @@ function cardImgHtml(src, isNew, delayMs) {
 window.onload = async () => {
     document.getElementById('rules-sb').innerText = SMALL_BLIND;
     document.getElementById('rules-bb').innerText = BIG_BLIND;
+    document.getElementById('rules-time').innerText = ACTION_TIME / 1000;
     await cargarPerfil();
     iniciarConexionMultijugador();
     renderGameUI();
@@ -148,6 +150,31 @@ function iniciarConexionMultijugador() {
         if (!isHost) {
             pokerChannel.send({ type: 'broadcast', event: 'request_state', payload: {} });
         }
+
+        // Detectar jugadores sentados que se desconectaron (cerraron la app /
+        // perdieron conexión) para marcarlos en la mesa y no trabar la partida.
+        if (isHost) {
+            let onlineUsers = new Set();
+            keys.forEach(k => {
+                (presences[k] || []).forEach(meta => { if (meta.user) onlineUsers.add(meta.user); });
+            });
+            let changed = false;
+            sharedState.seats.forEach((s, i) => {
+                if (!s) return;
+                let nowOffline = !onlineUsers.has(s.user);
+                if (nowOffline !== !!s.disconnected) {
+                    s.disconnected = nowOffline;
+                    changed = true;
+                    // Si justo era su turno cuando se desconectó, no lo hacemos
+                    // esperar los 20s completos: le damos un tiempo corto para
+                    // que la mano siga avanzando.
+                    if (nowOffline && sharedState.turnSeat === i) {
+                        sharedState.phaseEndTime = Math.min(sharedState.phaseEndTime, Date.now() + DISCONNECT_ACTION_TIME);
+                    }
+                }
+            });
+            if (changed) emitState();
+        }
     });
 
     pokerChannel.on('broadcast', { event: 'chat_message' }, (payload) => {
@@ -173,7 +200,7 @@ function iniciarConexionMultijugador() {
     });
 
     pokerChannel.subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') await pokerChannel.track({ online_at: new Date().toISOString() });
+        if (status === 'SUBSCRIBED') await pokerChannel.track({ online_at: new Date().toISOString(), user: displayUsername });
     });
 }
 
@@ -334,7 +361,7 @@ function startNewHandIfReady() {
 
     sharedState.turnSeat = findNextToAct(sharedState.bbSeat);
     sharedState.phase = 'PREFLOP';
-    sharedState.phaseEndTime = Date.now() + ACTION_TIME;
+    sharedState.phaseEndTime = Date.now() + turnTimeoutFor(sharedState.turnSeat);
     emitState();
 }
 
@@ -346,6 +373,11 @@ function postBlind(seatIdx, amount) {
     seat.totalBetThisHand += pay;
     sharedState.pot += pay;
     if (seat.stack === 0) seat.allIn = true;
+}
+
+function turnTimeoutFor(seatIdx) {
+    let seat = sharedState.seats[seatIdx];
+    return (seat && seat.disconnected) ? DISCONNECT_ACTION_TIME : ACTION_TIME;
 }
 
 function findNextToAct(referenceSeatIdx) {
@@ -424,7 +456,7 @@ function checkHandOrRoundProgress() {
         advancePhase();
     } else {
         sharedState.turnSeat = findNextToAct(sharedState.turnSeat);
-        sharedState.phaseEndTime = Date.now() + ACTION_TIME;
+        sharedState.phaseEndTime = Date.now() + turnTimeoutFor(sharedState.turnSeat);
         emitState();
     }
 }
@@ -455,7 +487,7 @@ function advancePhase() {
     }
 
     sharedState.turnSeat = findNextToAct(sharedState.dealerSeat);
-    sharedState.phaseEndTime = Date.now() + ACTION_TIME;
+    sharedState.phaseEndTime = Date.now() + turnTimeoutFor(sharedState.turnSeat);
     emitState();
 }
 
@@ -603,6 +635,7 @@ function evaluateBestHand(holeCards, community) {
 function gameLoop() {
     let timeLeft = Math.max(0, Math.ceil((sharedState.phaseEndTime - Date.now()) / 1000));
     actualizarTextosEstado(timeLeft);
+    updateTurnTimerRing(timeLeft);
 
     if (isHost) {
         if (sharedState.phase === 'WAITING' && sharedState.phaseEndTime <= Date.now()) {
@@ -797,13 +830,25 @@ function renderGameUI() {
                 prevSeatCardCount[i] = 0;
             }
 
+            let showTimer = i === st.turnSeat && ['PREFLOP', 'FLOP', 'TURN', 'RIVER'].includes(st.phase);
+            let timerHtml = showTimer ? `
+                <div class="seat-timer-ring" id="seat-timer-${i}">
+                    <svg viewBox="0 0 36 36">
+                        <circle class="ring-bg" cx="18" cy="18" r="15.5"></circle>
+                        <circle class="ring-fg" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="ring-num">--</div>
+                </div>` : '';
+
             div.innerHTML = `
                 ${i === st.dealerSeat ? '<div class="dealer-chip">D</div>' : ''}
+                ${timerHtml}
                 <div class="seat-name">${seat.user}${seat.allIn ? ' (ALL-IN)' : ''}</div>
                 <div class="seat-cards">${cardsHtml}</div>
                 <div class="seat-stack">$${seat.stack}</div>
                 ${seat.betThisRound > 0 ? `<div class="seat-bet">$${seat.betThisRound}</div>` : ''}
                 ${seat.folded ? '<div class="seat-tag">RETIRADO</div>' : ''}
+                ${seat.disconnected ? '<div class="seat-tag disconnected">🔌 DESCONECTADO</div>' : ''}
             `;
         }
         container.appendChild(div);
@@ -864,6 +909,22 @@ function showToast(msg, isWin) {
 }
 
 function toggleModal(show) { document.getElementById('rules-modal').style.display = show ? 'flex' : 'none'; }
+function toggleHandRankingsModal(show) { document.getElementById('hand-rankings-modal').style.display = show ? 'flex' : 'none'; }
+
+const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5; // debe coincidir con r="15.5" del SVG
+
+function updateTurnTimerRing(timeLeft) {
+    const st = sharedState;
+    const ring = document.getElementById(`seat-timer-${st.turnSeat}`);
+    if (!ring || !['PREFLOP', 'FLOP', 'TURN', 'RIVER'].includes(st.phase) || st.turnSeat === -1) return;
+    const total = Math.max(1, turnTimeoutFor(st.turnSeat) / 1000);
+    const pct = Math.max(0, Math.min(1, timeLeft / total));
+    const fg = ring.querySelector('.ring-fg');
+    const num = ring.querySelector('.ring-num');
+    if (fg) fg.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - pct));
+    if (num) num.textContent = timeLeft;
+    ring.classList.toggle('urgent', timeLeft <= 5);
+}
 function toggleChat() {
     const popup = document.getElementById("chat-popup");
     popup.style.display = (popup.style.display === "flex") ? "none" : "flex";
