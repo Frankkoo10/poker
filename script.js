@@ -29,7 +29,7 @@ const SMALL_BLIND = 10;
 const BIG_BLIND = 20;
 let bigBlindGlobal = BIG_BLIND; // usado desde el HTML (botones +/- de subida)
 const ACTION_TIME = 20000;      // ms para actuar en el turno
-const HAND_OVER_PAUSE = 6000;   // pausa mostrando resultados
+const HAND_OVER_PAUSE = 12000;  // pausa mostrando resultados (da tiempo a levantarse antes de la próxima mano)
 const WAITING_COUNTDOWN = 8000; // cuenta regresiva antes de arrancar mano
 
 const suitMap = { '♥': 'corazones', '♦': 'diamantes', '♣': 'treboles', '♠': 'picas' };
@@ -193,6 +193,10 @@ function emitState() {
         localStorage.setItem('pk_host_deck', JSON.stringify(secretHostDeck));
     }
     if (pokerChannel) pokerChannel.send({ type: 'broadcast', event: 'sync_state', payload: { state: sharedState } });
+    // El anfitrión no recibe su propio broadcast (Supabase no reenvía al emisor),
+    // así que si es él quien tiene un cashout pendiente (p. ej. se levantó de la
+    // mesa siendo host), hay que acreditárselo acá mismo o nunca cobra.
+    checkMyCashout();
     renderGameUI();
 }
 
@@ -715,7 +719,8 @@ function actualizarTextosEstado(timeLeft) {
     } else if (st.phase === 'SHOWDOWN') {
         statusText = 'SHOWDOWN'; subText = 'Mostrando manos...';
     } else if (st.phase === 'HAND_OVER') {
-        statusText = 'MANO FINALIZADA'; subText = st.message || '';
+        statusText = 'MANO FINALIZADA';
+        subText = (st.message || '') + ` · Podés levantarte antes de la próxima mano (${timeLeft}s)`;
     }
     document.getElementById('game-status').innerText = statusText;
     document.getElementById('sub-status').innerText = subText;
