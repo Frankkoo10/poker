@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Poker Live - Texas Hold'em</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <a href="https://frankkoo10.github.io/casinou/" class="top-logo" onclick="window.location.reload();">
+        <img src="logo.png" alt="Casino Logo" />
+    </a>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="main-wrapper">
+        <aside class="instructions-panel">
+            <h2>REGLAS</h2>
+            <p><strong>Texas Hold'em</strong> sin límite, 2 a 6 jugadores.</p>
+            <p>Cada uno recibe 2 cartas propias. Se comparten 5 cartas comunitarias (Flop, Turn, River).</p>
+            <p>Gana la mejor mano de 5 cartas combinando las tuyas con las de la mesa.</p>
+            <p><strong>Ciegas:</strong> SB $<span id="rules-sb">10</span> / BB $<span id="rules-bb">20</span>, rotan cada mano.</p>
+            <p>Podés Pasar, Igualar, Subir, Ir All-In o Retirarte en tu turno.</p>
+        </aside>
+
+        <button id="info-btn-mobile" class="info-btn" onclick="toggleModal(true)">
+            <img src="info.png" alt="Info" class="btn-icon">
+        </button>
+
+        <main class="game-container">
+            <div class="top-info">
+                <div class="online-indicator">
+                    <span class="dot"></span> <span id="online-count-value">1</span> en Sala
+                </div>
+            </div>
+
+            <h1>VICTORY POKER</h1>
+            <div class="stats">SALDO: $<span id="balance">0</span></div>
+
+            <div id="game-status" class="game-status">CONECTANDO A LA MESA...</div>
+            <div id="sub-status" class="sub-status"></div>
+
+            <div class="poker-table-wrap">
+                <div class="poker-table" id="poker-table">
+                    <div class="table-felt">
+                        <div class="pot-area">
+                            <div class="pot-label">POTE</div>
+                            <div class="pot-value">$<span id="pot-value">0</span></div>
+                            <div id="community-cards" class="community-cards"></div>
+                        </div>
+                    </div>
+                    <div id="seats-container" class="seats-container"></div>
+                </div>
+            </div>
+
+            <div id="join-panel" class="join-panel">
+                <div class="chip-selector" id="buyin-selector">
+                    <div class="selector-chip" data-value="500">$500</div>
+                    <div class="selector-chip active" data-value="1000">$1k</div>
+                    <div class="selector-chip" data-value="2500">$2.5k</div>
+                    <div class="selector-chip" data-value="5000">$5k</div>
+                </div>
+                <button id="sit-btn" class="deal-like-btn" onclick="sentarme()">SENTARME EN LA MESA</button>
+            </div>
+
+            <div id="raise-panel" class="raise-panel" style="display:none;">
+                <div class="raise-row">
+                    <button onclick="ajustarRaise(-bigBlindGlobal)">-</button>
+                    <div class="raise-amount">$<span id="raise-value">0</span></div>
+                    <button onclick="ajustarRaise(bigBlindGlobal)">+</button>
+                </div>
+                <div class="raise-presets">
+                    <button onclick="setRaisePreset('min')">MÍN</button>
+                    <button onclick="setRaisePreset('half')">1/2 POTE</button>
+                    <button onclick="setRaisePreset('pot')">POTE</button>
+                    <button onclick="setRaisePreset('allin')">ALL-IN</button>
+                </div>
+                <div class="raise-confirm-row">
+                    <button class="cancel-raise-btn" onclick="cancelarRaise()">CANCELAR</button>
+                    <button class="confirm-raise-btn" onclick="confirmarRaise()">CONFIRMAR SUBIDA</button>
+                </div>
+            </div>
+
+            <div class="controls" id="action-controls">
+                <button id="leave-btn" onclick="levantarme()" disabled>LEVANTARME</button>
+                <button id="fold-btn" onclick="sendAction('fold')" disabled>RETIRARSE</button>
+                <button id="check-btn" onclick="sendAction('check')" disabled>PASAR</button>
+                <button id="call-btn" onclick="sendAction('call')" disabled>IGUALAR</button>
+                <button id="raise-btn" onclick="abrirRaise()" disabled>SUBIR</button>
+                <button id="allin-btn" onclick="sendAction('allin')" disabled>ALL-IN</button>
+            </div>
+        </main>
+    </div>
+
+    <div id="rules-modal" class="modal-overlay" onclick="toggleModal(false)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close-modal" onclick="toggleModal(false)">
+                <img src="close.png" alt="Cerrar" class="btn-icon">
+            </span>
+            <h2>REGLAS</h2>
+            <hr>
+            <p><strong>Texas Hold'em sin límite.</strong> 2 a 6 jugadores por mesa.</p>
+            <p>Cada jugador recibe 2 cartas privadas. Se reparten 5 cartas comunitarias en 3 rondas (Flop 3, Turn 1, River 1).</p>
+            <p>Gana quien arme la mejor combinación de 5 cartas entre sus 2 privadas y las 5 de la mesa.</p>
+            <p>Ciegas rotativas, apuesta libre (sin límite), all-in y botes divididos (side pots) soportados.</p>
+        </div>
+    </div>
+
+    <!-- CHAT EN VIVO -->
+    <button id="chat-toggle-btn" class="chat-toggle-btn" onclick="toggleChat()">
+        <img src="chat.png" alt="Chat" class="btn-icon"> Chat
+    </button>
+    <div id="chat-popup" class="chat-popup">
+        <div class="chat-header">
+            <span>Chat en Vivo</span>
+            <button class="chat-close-btn" onclick="toggleChat()">
+                <img src="close.png" alt="Cerrar" class="btn-icon">
+            </button>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-group">
+            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." onkeypress="manejarEnterChat(event)" autocomplete="off">
+            <button id="btn-send-chat" onclick="enviarMensajeChat()">Enviar</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
