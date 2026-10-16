@@ -1,7 +1,3 @@
-// ==========================================
-// 1. CONFIGURACIÓN SUPABASE Y MULTIJUGADOR
-// (mismo proyecto/tabla "perfiles" que usa el resto del casino)
-// ==========================================
 const supabaseUrl = 'https://wgqqbahoalozgfukioza.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndncXFiYWhvYWxvemdmdWtpb3phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTA3OTYsImV4cCI6MjA5OTgyNjc5Nn0.v_kpYceS8ceIUBNaLLHjfyBeFA2Y3lDRy7Yn6cb5Uz8';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -21,28 +17,22 @@ let pokerChannel = null;
 let onlineCount = 1;
 let isHost = false;
 
-// ==========================================
-// 2. CONSTANTES DE LA MESA
-// ==========================================
 const MAX_SEATS = 6;
 const SMALL_BLIND = 10;
 const BIG_BLIND = 20;
-let bigBlindGlobal = BIG_BLIND; // usado desde el HTML (botones +/- de subida)
-const ACTION_TIME = 20000;      // ms para actuar en el turno
-const DISCONNECT_ACTION_TIME = 5000; // ms para actuar si el jugador en turno está desconectado
-const HAND_OVER_PAUSE = 12000;  // pausa mostrando resultados (da tiempo a levantarse antes de la próxima mano)
-const WAITING_COUNTDOWN = 8000; // cuenta regresiva antes de arrancar mano
+let bigBlindGlobal = BIG_BLIND;
+const ACTION_TIME = 20000;
+const DISCONNECT_ACTION_TIME = 5000;
+const HAND_OVER_PAUSE = 12000;
+const WAITING_COUNTDOWN = 8000;
 
 const suitMap = { '♥': 'corazones', '♦': 'diamantes', '♣': 'treboles', '♠': 'picas' };
 const RANK_ORDER = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 function rankVal(v) { return RANK_ORDER.indexOf(v) + 2; }
 function cardFile(c) { return `${c.v}_${suitMap[c.s]}.png`; }
 
-// ==========================================
-// 3. ESTADO GLOBAL COMPARTIDO
-// ==========================================
 let sharedState = {
-    phase: 'WAITING', // WAITING, PREFLOP, FLOP, TURN, RIVER, SHOWDOWN, HAND_OVER
+    phase: 'WAITING',
     phaseEndTime: Date.now() + WAITING_COUNTDOWN,
     seats: Array(MAX_SEATS).fill(null),
     dealerSeat: -1,
@@ -69,17 +59,11 @@ if (savedHostDeck) {
     try { secretHostDeck = JSON.parse(savedHostDeck); } catch (e) {}
 }
 
-// ==========================================
-// 4. ESTADO LOCAL DEL CLIENTE
-// ==========================================
 let balance = 5000;
 let selectedBuyIn = 1000;
 let raiseTarget = 0;
 let lastMessageShown = '';
 
-// Control de re-render: evita reconstruir las cartas cuando el estado no cambió
-// (esto es lo que hacía que "saltaran" cada segundo) y recuerda cuántas cartas
-// ya se mostraron para animar solo las nuevas.
 let lastRenderSnapshot = null;
 let prevCommunityCount = 0;
 let prevSeatCardCount = {};
@@ -100,9 +84,6 @@ window.onload = async () => {
     setInterval(gameLoop, 1000);
 };
 
-// ==========================================
-// SALDO Y PERFIL
-// ==========================================
 async function cargarPerfil() {
     try {
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -134,9 +115,6 @@ async function modificarSaldo(monto) {
 }
 function updateBalanceUI() { document.getElementById('balance').textContent = balance; }
 
-// ==========================================
-// 5. CONEXIÓN MULTIJUGADOR
-// ==========================================
 function iniciarConexionMultijugador() {
     pokerChannel = supabaseClient.channel('poker_room_sync', { config: { presence: { key: myPresenceKey } } });
 
@@ -151,8 +129,6 @@ function iniciarConexionMultijugador() {
             pokerChannel.send({ type: 'broadcast', event: 'request_state', payload: {} });
         }
 
-        // Detectar jugadores sentados que se desconectaron (cerraron la app /
-        // perdieron conexión) para marcarlos en la mesa y no trabar la partida.
         if (isHost) {
             let onlineUsers = new Set();
             keys.forEach(k => {
@@ -165,9 +141,7 @@ function iniciarConexionMultijugador() {
                 if (nowOffline !== !!s.disconnected) {
                     s.disconnected = nowOffline;
                     changed = true;
-                    // Si justo era su turno cuando se desconectó, no lo hacemos
-                    // esperar los 20s completos: le damos un tiempo corto para
-                    // que la mano siga avanzando.
+
                     if (nowOffline && sharedState.turnSeat === i) {
                         sharedState.phaseEndTime = Math.min(sharedState.phaseEndTime, Date.now() + DISCONNECT_ACTION_TIME);
                     }
@@ -220,9 +194,7 @@ function emitState() {
         localStorage.setItem('pk_host_deck', JSON.stringify(secretHostDeck));
     }
     if (pokerChannel) pokerChannel.send({ type: 'broadcast', event: 'sync_state', payload: { state: sharedState } });
-    // El anfitrión no recibe su propio broadcast (Supabase no reenvía al emisor),
-    // así que si es él quien tiene un cashout pendiente (p. ej. se levantó de la
-    // mesa siendo host), hay que acreditárselo acá mismo o nunca cobra.
+
     checkMyCashout();
     renderGameUI();
 }
@@ -233,9 +205,6 @@ function sendPlayerAction(action, extra = {}) {
     if (pokerChannel) pokerChannel.send({ type: 'broadcast', event: 'player_action', payload });
 }
 
-// ==========================================
-// 6. LÓGICA DEL ANFITRIÓN (HOST) - PROCESA ACCIONES
-// ==========================================
 function processAction(data) {
     switch (data.action) {
         case 'sit': handleSit(data.user, data.buyIn); break;
@@ -276,7 +245,7 @@ function handleLeaveRequest(user) {
     } else {
         sharedState.seats[idx].leaving = true;
         if (!sharedState.seats[idx].folded && sharedState.turnSeat === idx) {
-            applyPlayerAction(user, 'fold'); // ya llama emitState()
+            applyPlayerAction(user, 'fold');
             return;
         } else if (!sharedState.seats[idx].folded) {
             sharedState.seats[idx].folded = true;
@@ -327,7 +296,6 @@ function startNewHandIfReady() {
         sharedState.bbSeat = nextOccupied(sharedState.sbSeat, activeSet);
     }
 
-    // orden de la mano empezando en el SB
     let order = [];
     let idx = sharedState.sbSeat;
     for (let k = 0; k < activeIdx.length; k++) {
@@ -478,7 +446,7 @@ function advancePhase() {
     let activeToAct = remaining.filter(i => !sharedState.seats[i].allIn);
 
     if (activeToAct.length <= 1) {
-        // todos (o casi todos) all-in: se revela el resto de la mesa solo, sin apuestas
+
         sharedState.turnSeat = -1;
         sharedState.phaseEndTime = Date.now() + 1600;
         emitState();
@@ -505,7 +473,7 @@ function calculateSidePots() {
         else if (amount > 0 && pots.length > 0) { pots[pots.length - 1].amount += amount; sumAssigned += amount; }
         prev = level;
     });
-    // red de seguridad por redondeos/casos borde
+
     let diff = sharedState.pot - sumAssigned;
     if (diff !== 0 && pots.length > 0) pots[pots.length - 1].amount += diff;
     return pots;
@@ -570,9 +538,6 @@ function autoActTimeout() {
     applyPlayerAction(seat.user, action);
 }
 
-// ==========================================
-// 7. EVALUADOR DE MANOS DE POKER
-// ==========================================
 function combinations5(cards) {
     const result = [], n = cards.length;
     for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) for (let c = b + 1; c < n; c++)
@@ -629,9 +594,6 @@ function evaluateBestHand(holeCards, community) {
     return best;
 }
 
-// ==========================================
-// 8. GAME LOOP (host)
-// ==========================================
 function gameLoop() {
     let timeLeft = Math.max(0, Math.ceil((sharedState.phaseEndTime - Date.now()) / 1000));
     actualizarTextosEstado(timeLeft);
@@ -661,9 +623,6 @@ function gameLoop() {
     renderGameUI();
 }
 
-// ==========================================
-// 9. ACCIONES DEL JUGADOR (UI)
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#buyin-selector .selector-chip').forEach(chip => {
         chip.addEventListener('click', function () {
@@ -736,9 +695,6 @@ function confirmarRaise() {
     else sendPlayerAction('raise', { amount: raiseTarget });
 }
 
-// ==========================================
-// 10. RENDERIZADO VISUAL
-// ==========================================
 function actualizarTextosEstado(timeLeft) {
     const st = sharedState;
     let statusText = '', subText = '';
@@ -768,9 +724,6 @@ function actualizarTextosEstado(timeLeft) {
 function renderGameUI() {
     const st = sharedState;
 
-    // Si nada relevante cambió desde el último render, no tocamos el DOM.
-    // Esto es lo que evitaba que las cartas "saltaran": antes se reconstruía
-    // todo cada 1 segundo (gameLoop) aunque el estado fuera idéntico.
     const snapshot = JSON.stringify({
         seats: st.seats, communityCards: st.communityCards, turnSeat: st.turnSeat,
         dealerSeat: st.dealerSeat, phase: st.phase, pot: st.pot
@@ -780,9 +733,6 @@ function renderGameUI() {
 
     document.getElementById('pot-value').innerText = st.pot;
 
-    // Cartas del medio: si hay menos que antes es porque arrancó una mano nueva.
-    // Solo animamos las cartas que son realmente nuevas, y las repartimos
-    // "una por una" con un pequeño delay entre cada una.
     if (st.communityCards.length < prevCommunityCount) prevCommunityCount = 0;
     document.getElementById('community-cards').innerHTML = st.communityCards.map((c, i) => {
         let isNew = i >= prevCommunityCount;
@@ -814,10 +764,7 @@ function renderGameUI() {
             if (seat.holeCards && seat.holeCards.length === 2) {
                 let revealToAll = ['SHOWDOWN', 'HAND_OVER'].includes(st.phase) && !seat.folded;
                 let isMine = seat.user === displayUsername;
-                // Solo son "nuevas" (y por lo tanto se animan) la primera vez que
-                // este asiento pasa de 0 a 2 cartas en la mano. Así, aunque se
-                // vuelva a renderizar por una apuesta de otro jugador, tus cartas
-                // ya no vuelven a "saltar".
+
                 let isNewDeal = (prevSeatCardCount[i] || 0) < 2;
                 if (isMine || revealToAll) {
                     cardsHtml = seat.holeCards.map((c, k) =>
@@ -896,9 +843,6 @@ function renderControls() {
     }
 }
 
-// ==========================================
-// 11. UTILIDADES: TOASTS, MODAL, CHAT
-// ==========================================
 function showToast(msg, isWin) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -911,7 +855,7 @@ function showToast(msg, isWin) {
 function toggleModal(show) { document.getElementById('rules-modal').style.display = show ? 'flex' : 'none'; }
 function toggleHandRankingsModal(show) { document.getElementById('hand-rankings-modal').style.display = show ? 'flex' : 'none'; }
 
-const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5; // debe coincidir con r="15.5" del SVG
+const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5;
 
 function updateTurnTimerRing(timeLeft) {
     const st = sharedState;

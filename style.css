@@ -51,7 +51,6 @@ h3 { margin-bottom: 5px; }
 .stats { font-size: 1.2rem; font-weight: 700; color: #fff; background: rgba(0, 0, 0, 0.4); padding: 10px 20px; border-radius: 8px; display: inline-block; border: 1px solid rgba(50,215,75,0.3); margin-bottom: 15px; }
 .stats span { color: var(--success); }
 
-/* ============ MESA DE POKER ============ */
 .poker-table-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
 .poker-table { position: relative; width: 100%; max-width: 720px; aspect-ratio: 16 / 10; }
 .table-felt {
@@ -87,7 +86,6 @@ h3 { margin-bottom: 5px; }
 .seat-tag { font-size: 0.62rem; font-weight: 800; color: var(--danger); }
 .seat-status { font-size: 0.62rem; font-weight: 800; color: var(--muted); }
 
-/* posiciones para hasta 6 asientos (ovalo) */
 .seat[data-pos="0"] { left: 50%; top: 92%; }
 .seat[data-pos="1"] { left: 12%; top: 74%; }
 .seat[data-pos="2"] { left: 6%; top: 26%; }
@@ -99,7 +97,6 @@ h3 { margin-bottom: 5px; }
 .card-img.deal-anim { animation: slideDown 0.35s ease-out both; }
 @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-/* ============ PANEL DE UNIRSE ============ */
 .join-panel { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 18px; }
 .deal-like-btn { background: var(--outline); color: #140612; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-family: inherit; font-weight: 900; font-size: 0.95rem; }
 .deal-like-btn:hover { background: var(--accent); }
@@ -114,7 +111,6 @@ h3 { margin-bottom: 5px; }
 .selector-chip:hover { transform: scale(1.1); }
 .selector-chip.active { border-style: solid; border-color: var(--outline); box-shadow: 0 0 15px var(--accent); transform: scale(1.15); }
 
-/* ============ PANEL DE SUBIDA (RAISE) ============ */
 .raise-panel { background: rgba(0,0,0,0.35); border: 1px solid rgba(255,209,80,0.2); border-radius: 14px; padding: 14px; margin-bottom: 16px; }
 .raise-row { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 10px; }
 .raise-row button { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--outline); color: #140612; font-weight: 900; font-size: 1.2rem; cursor: pointer; }
@@ -150,7 +146,6 @@ h3 { margin-bottom: 5px; }
 .modal-content p, .modal-content ul { font-size: 0.95rem; line-height: 1.5; color: #fff; margin-bottom: 8px; }
 .close-modal { position: absolute; top: 15px; right: 15px; cursor: pointer; display: flex; align-items: center; }
 
-/* ============ RANKING DE MANOS ============ */
 .rank-link-btn { display: block; width: 100%; margin-top: 12px; background: rgba(255,209,80,0.12); color: var(--accent); border: 1px solid var(--accent); padding: 10px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.5px; }
 .rank-link-btn:hover { background: var(--outline); color: #140612; }
 .ranking-btn { right: 60px; font-size: 1rem; background: var(--outline); }
@@ -161,7 +156,6 @@ h3 { margin-bottom: 5px; }
 .rank-ex { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 400; margin-top: 2px; }
 .rank-footnote { font-size: 0.78rem; color: var(--muted); font-style: italic; }
 
-/* ============ TIMER DE TURNO Y DESCONEXIÓN ============ */
 .seat-timer-ring { position: relative; width: 34px; height: 34px; margin: 2px auto -2px; }
 .seat-timer-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .seat-timer-ring circle { fill: none; stroke-width: 3; }
